@@ -77,6 +77,7 @@
                 contentType: 'application/json; charset=utf-8',
                 success: function (data) {
                     if (data) {
+
                         var start_poi_lon = data[0];
                         var start_poi_lat = data[1];
                         var des_poi_lon = data[2];
@@ -90,8 +91,9 @@
                         map.enableScrollWheelZoom(true);
                         var start_marker = new BMap.Marker(start_point);
                         var des_marker = new BMap.Marker(des_point);
-                        map.addOverlay(start_marker);
+                        map.addOverlay(start_marker, "blue");
                         map.addOverlay(des_marker);
+
                         start_marker.disableMassClear();
                         des_marker.disableMassClear();
 
@@ -651,10 +653,40 @@
                                     $(".hotel_list").append("<tr><td style=font-weight:bold>Name</td><td>" + start_poi[1] + "</td><td>" + des_poi[1] + "</td></tr>");
                                     $(".hotel_list").append("<tr><td style=font-weight:bold>Rate</td><td>" + start_poi[0] + "</td><td>" + des_poi[0] + "</td></tr>");
                                     $(".hotel_list").append("<tr><td style=font-weight:bold>Price</td><td>" + start_poi[3] + "</td><td>" + des_poi[3] + "</td></tr>");
+                                    var start_hotel = start_poi[2].split(",");
+                                    var des_hotel = des_poi[2].split(",");
+                                    var start_h_point = new BMap.Point(start_hotel[0], start_hotel[1]);
+                                    var des_h_point = new BMap.Point(des_hotel[0], des_hotel[1]);
+                                    var start_h_marker = new BMap.Circle(start_h_point, 750);
+                                    var des_h_marker = new BMap.Circle(des_h_point, 750);
+                                    map.addOverlay(start_h_marker);
+                                    map.addOverlay(des_h_marker);
+
+                                    var start_h_opts = {
+                                        width: 225,
+                                        height: 200,
+                                        title: "Hotel around start point"
+                                    };
+                                    var start_h_infoWindow = new BMap.InfoWindow("Name:" + start_poi[1] + ", Rate:" + start_poi[0] + ", Price:" + start_poi[3]
+                                        + "\nLongitude:" + start_hotel[0] + "\nLatitude:" + start_hotel[1], start_h_opts);
+                                    start_h_marker.addEventListener("click", function () {
+                                        map.openInfoWindow(start_h_infoWindow, start_h_point);
+                                    });
+
+                                    var des_h_opts = {
+                                        width: 225,
+                                        height: 200,
+                                        title: "Hotel around destination"
+                                    };
+                                    var des_h_infoWindow = new BMap.InfoWindow("Name:" + des_poi[1] + ", Rate:" + des_poi[0] + ", Price:" + des_poi[3]
+                                        + "\nLongitude:" + des_hotel[0] + "\nLatitude:" + des_hotel[1], des_h_opts);
+                                    des_h_marker.addEventListener("click", function () {
+                                        map.openInfoWindow(des_h_infoWindow, des_h_point);
+                                    });
+
                                 }
                             }
                         });
-
 
                         var mySwiper = new Swiper('.swiper-container', {
                             direction: 'horizontal',
