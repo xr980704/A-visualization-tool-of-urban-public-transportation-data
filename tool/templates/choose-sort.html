@@ -1,0 +1,726 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.4/css/select2.min.css" rel="stylesheet" />
+    <link href="/static/css/map.css" rel="stylesheet" type="text/css" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Swiper/4.0.2/css/swiper.min.css">
+    <script type="text/javascript" src="http://cdn.bootcss.com/jquery/1.12.4/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/select2/4.0.4/js/select2.min.js"></script>
+    <script type="text/javascript" src="http://api.map.baidu.com/api?v=3.0&ak=b7dHG2QNIeadyOSvrmraHQt05nnggldM"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/echarts/4.3.0/echarts.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Swiper/4.0.2/js/swiper.min.js"></script>
+    <script type="text/javascript">
+        function Select(sort, name, url) {
+            var data;
+            var selected_sort = document.getElementById(sort);
+            $(name).html("");
+            for(j=0; j<selected_sort.length; j++){
+                if (selected_sort[j].selected){
+                    typename = selected_sort[j].text;
+                    {#alert(typename);#}
+                    data = {'typename': typename};
+                    $.ajax({
+                        url: url,
+                        type: "POST",
+                        data: JSON.stringify(data),
+                        dataType:'json',
+                        contentType:'application/json; charset=utf-8',
+                        success: function(data) {
+                            if(data) {
+
+                                for (i= 0; i < data.length; i++) {
+
+                                   if(data[i][2] == "[]") {
+                                       $("<option value='" + data[i][0] + "'>" + data[i][1] + "</option>").appendTo(name);
+                                   }
+                                   else {
+                                       $("<option value='" + data[i][0] + "'>" + data[i][1] + "[" + data[i][2] + "]" + "</option>").appendTo(name);
+                                   }
+
+                                }
+                            }
+                            else{
+                                alert("Some errors happen!");
+                            }
+
+                        }
+
+                    });
+                }
+            }
+        }
+
+        function ajaxForm() {
+            $(".hotel_list").css("display","block");
+            var data;
+            var selected_start_name = document.getElementById("start_name");
+            var selected_des_name = document.getElementById("destination_name");
+            var s_name;
+            var d_name;
+            for (j = 0; j < selected_start_name.length; j++) {
+                if (selected_start_name[j].selected) {
+                    s_name = selected_start_name[j].text;
+                }
+            }
+
+            for (j = 0; j < selected_des_name.length; j++) {
+                if (selected_des_name[j].selected) {
+                    d_name = selected_des_name[j].text;
+                }
+            }
+            data = {'start_name': s_name, 'des_name': d_name};
+            $.ajax({
+                url: "/geo_map",
+                type: "post",
+                data: JSON.stringify(data),
+                dataType: 'json',
+                contentType: 'application/json; charset=utf-8',
+                success: function (data) {
+                    if (data) {
+                        var start_poi_lon = data[0];
+                        var start_poi_lat = data[1];
+                        var des_poi_lon = data[2];
+                        var des_poi_lat = data[3];
+                        var start_poi_name = data[4];
+                        var des_poi_name = data[5];
+                        var map = new BMap.Map("container");
+                        var start_point = new BMap.Point(start_poi_lon, start_poi_lat);
+                        var des_point = new BMap.Point(des_poi_lon, des_poi_lat);
+                        map.centerAndZoom(start_point, 11);
+                        map.enableScrollWheelZoom(true);
+                        var start_marker = new BMap.Marker(start_point);
+                        var des_marker = new BMap.Marker(des_point);
+                        map.addOverlay(start_marker);
+                        map.addOverlay(des_marker);
+                        start_marker.disableMassClear();
+                        des_marker.disableMassClear();
+
+                        var start_opts = {
+                            width: 225,
+                            height: 200,
+                            title: "Start point"
+                        };
+                        var start_infoWindow = new BMap.InfoWindow("Name:" + start_poi_name + "\nLongitude:" + start_poi_lon + "\nLatitude:" + start_poi_lat, start_opts);
+                        start_marker.addEventListener("click", function () {
+                            map.openInfoWindow(start_infoWindow, start_point);
+                        });
+
+                        var des_opts = {
+                            width: 225,
+                            height: 200,
+                            title: "Destination point"
+                        };
+                        var des_infoWindow = new BMap.InfoWindow("Name:" + des_poi_name + "\nLongitude:" + des_poi_lon + "\nLatitude:" + des_poi_lat, des_opts);
+                        des_marker.addEventListener("click", function () {
+                            map.openInfoWindow(des_infoWindow, des_point);
+                        });
+
+                        function DriveControl() {
+                            this.defaultAnchor = BMAP_ANCHOR_TOP_LEFT;
+                            this.defaultOffset = new BMap.Size(75, 10);
+                        }
+
+                        DriveControl.prototype = new BMap.Control();
+                        DriveControl.prototype.initialize = function (map) {
+                            var d_div = document.createElement("div");
+                            d_div.appendChild(document.createTextNode("Driving"));
+                            d_div.style.cursor = "pointer";
+                            d_div.style.border = "1px solid gray";
+                            d_div.style.backgroundColor = "white";
+                            d_div.onclick = function (e) {
+                                var driving = new BMap.DrivingRoute(map, {
+                                    renderOptions: {
+                                        map: map,
+                                        autoViewport: true
+                                    }
+                                });
+                                driving.search(start_point, des_point);
+                            };
+
+                            map.getContainer().appendChild(d_div);
+                            return d_div;
+                        };
+                        var drivepath = new DriveControl();
+                        map.addControl(drivepath);
+
+                        function BusControl() {
+                            this.defaultAnchor = BMAP_ANCHOR_TOP_LEFT;
+                            this.defaultOffset = new BMap.Size(140, 10);
+                        }
+
+                        BusControl.prototype = new BMap.Control();
+                        BusControl.prototype.initialize = function (map) {
+                            var b_div = document.createElement("div");
+                            b_div.appendChild(document.createTextNode("Bus"));
+                            b_div.style.cursor = "pointer";
+                            b_div.style.border = "1px solid gray";
+                            b_div.style.backgroundColor = "white";
+                            b_div.onclick = function (e) {
+                                {#map.getContainer().removeChild(d_div);#}
+                                var transit = new BMap.TransitRoute(map, {
+                                    renderOptions: {
+                                        map: map,
+                                        autoViewport: true
+                                    }
+                                });
+                                transit.search(start_point, des_point);
+                            };
+                            map.getContainer().appendChild(b_div);
+                            return b_div;
+                        };
+                        var buspath = new BusControl();
+                        map.addControl(buspath);
+
+                        function RidingControl() {
+                            this.defaultAnchor = BMAP_ANCHOR_TOP_LEFT;
+                            this.defaultOffset = new BMap.Size(180, 10);
+                        }
+
+                        RidingControl.prototype = new BMap.Control();
+                        RidingControl.prototype.initialize = function (map) {
+                            var r_div = document.createElement("div");
+                            r_div.appendChild(document.createTextNode("Riding"));
+                            r_div.style.cursor = "pointer";
+                            r_div.style.border = "1px solid gray";
+                            r_div.style.backgroundColor = "white";
+                            r_div.onclick = function (e) {
+                                var riding = new BMap.RidingRoute(map, {renderOptions: {map: map, autoViewport: true}});
+                                riding.search(start_point, des_point);
+                            };
+                            map.getContainer().appendChild(r_div);
+                            return r_div;
+                        };
+                        var ridePath = new RidingControl();
+                        map.addControl(ridePath);
+
+                        function WalkingControl() {
+                            this.defaultAnchor = BMAP_ANCHOR_TOP_LEFT;
+                            this.defaultOffset = new BMap.Size(237, 10);
+                        }
+
+                        WalkingControl.prototype = new BMap.Control();
+                        WalkingControl.prototype.initialize = function (map) {
+                            var w_div = document.createElement("div");
+                            w_div.appendChild(document.createTextNode("Walking"));
+                            w_div.style.cursor = "pointer";
+                            w_div.style.border = "1px solid gray";
+                            w_div.style.backgroundColor = "white";
+                            w_div.onclick = function (e) {
+                                var walking = new BMap.WalkingRoute(map, {
+                                    renderOptions: {
+                                        map: map,
+                                        autoViewport: true
+                                    }
+                                });
+                                walking.search(start_point, des_point);
+                            };
+                            map.getContainer().appendChild(w_div);
+                            return w_div;
+                        };
+                        var walkPath = new WalkingControl();
+                        map.addControl(walkPath);
+
+                        function ClearControl() {
+                            this.defaultAnchor = BMAP_ANCHOR_TOP_LEFT;
+                            this.defaultOffset = new BMap.Size(307, 10);
+                        }
+
+                        ClearControl.prototype = new BMap.Control();
+                        ClearControl.prototype.initialize = function (map) {
+                            var div = document.createElement("div");
+                            div.appendChild(document.createTextNode("Clear"));
+                            div.style.cursor = "pointer";
+                            div.style.border = "1px solid gray";
+                            div.style.backgroundColor = "white";
+                            div.onclick = function (e) {
+                                map.clearOverlays();
+                            };
+                            map.getContainer().appendChild(div);
+                            return div;
+                        };
+                        var clear = new ClearControl();
+                        map.addControl(clear);
+
+                        map.addControl(new BMap.NavigationControl());
+                        map.addControl(new BMap.ScaleControl());
+                        map.addControl(new BMap.OverviewMapControl());
+                        map.addControl(new BMap.MapTypeControl());
+                        map.setCurrentCity("成都");
+
+                        var poi_data = {
+                            'start_poi_lon': start_poi_lon,
+                            'start_poi_lat': start_poi_lat,
+                            'des_poi_lon': des_poi_lon,
+                            'des_poi_lat': des_poi_lat
+                        };
+                        $.ajax({
+                            url: "/bus_path",
+                            type: "post",
+                            data: JSON.stringify(poi_data),
+                            dataType: 'json',
+                            contentType: 'application/json; charset=utf-8',
+                            success: function (data) {
+                                if (data) {
+                                    var busChart = echarts.init(document.getElementById('bus'));
+                                    var list1 = [[
+                                        data[0]['b_distance'], data[0]['b_time'], data[0]['b_cost'], data[0]['subway_cost'], data[0]['bus_cost']
+                                    ]];
+                                    var list2 = [[
+                                        data[1]['b_distance'], data[1]['b_time'], data[1]['b_cost'], data[1]['subway_cost'], data[1]['bus_cost']
+                                    ]];
+                                    var list3 = [[
+                                        data[2]['b_distance'], data[2]['b_time'], data[2]['b_cost'], data[2]['subway_cost'], data[2]['bus_cost']
+                                    ]];
+
+                                    var max_cost = Math.max(data[0]['b_cost'], data[1]['b_cost'], data[2]['b_cost']) + 1;
+
+                                    var schema = [
+                                        {name: 'Distance', index: 0, text: 'Distance(M)'},
+                                        {name: 'Time', index: 1, text: 'Time(S)'},
+                                        {name: 'Total Cost', index: 2, text: 'Total cost(¥)'},
+                                        {name: 'Subway Cost', index: 3, text: 'Subway cost(¥)'},
+                                        {name: 'Bus Cost', index: 4, text: 'Bus cost(¥)'},
+                                    ];
+
+                                    var lineStyle = {
+                                        normal: {
+                                            width: 1,
+                                            opacity: 0.5
+                                        }
+                                    };
+
+                                    var option = {
+                                        title: {
+                                            text: 'Comparison of different bus strategy',
+                                            textStyle: {
+                                                fontFamily: 'Arial',
+                                                fontSize: 18,
+                                                fontStyle: 'normal',
+                                                fontWeight: 'bold',
+                                            }
+                                        },
+                                        backgroundColor: '#fff',
+                                        legend: {
+                                            bottom: 30,
+                                            itemGap: 35,
+                                            data: ["Less change", "Less walking", "Less time"],
+                                            textStyle: {
+                                                color: '#000000',
+                                                fontSize: 12
+                                            }
+                                        },
+                                        tooltip: {},
+
+                                        parallelAxis: [
+                                            {dim: 0, name: schema[0].text},
+                                            {dim: 1, name: schema[1].text},
+                                            {dim: 2, name: schema[2].text},
+                                            {dim: 3, name: schema[3].text},
+                                            {dim: 4, name: schema[4].text}
+                                        ],
+                                        visualMap: {
+                                            show: true,
+                                            min: 0,
+                                            max: max_cost,
+                                            dimension: 2,
+                                            x: '5px',
+                                            y: '100px',
+                                            inRange: {
+                                                color: ['#d94e5d', '#eac736', '#50a3ba'].reverse(),
+                                            }
+                                        },
+                                        parallel: {
+                                            left: '10%',
+                                            right: '15%',
+                                            bottom: 100,
+                                            parallelAxisDefault: {
+                                                nameTextStyle: {
+                                                    color: '#000000',
+                                                    fontSize: 12
+                                                },
+                                                axisLine: {
+                                                    lineStyle: {
+                                                        color: '#00008B'
+                                                    }
+                                                },
+                                                axisLabel: {
+                                                    color: '#000000'
+                                                }
+                                            }
+                                        },
+                                        series: [
+                                            {
+                                                name: 'Less change',
+                                                type: 'parallel',
+                                                lineStyle: lineStyle,
+                                                data: list1
+                                            },
+                                            {
+                                                name: 'Less walking',
+                                                type: 'parallel',
+                                                lineStyle: lineStyle,
+                                                data: list2
+                                            },
+                                            {
+                                                name: 'Less time',
+                                                type: 'parallel',
+                                                lineStyle: lineStyle,
+                                                data: list3
+                                            }
+                                        ]
+                                    };
+                                    busChart.setOption(option);
+                                }
+                            }
+                        });
+
+                        $.ajax({
+                            url: "/drive_path",
+                            type: "post",
+                            data: JSON.stringify(poi_data),
+                            dataType: 'json',
+                            contentType: 'application/json; charset=utf-8',
+                            success: function (data) {
+                                if (data) {
+                                    var driveChart = echarts.init(document.getElementById('drive'));
+                                    var d_data1 = [[
+                                        data[0]['d_distance'], data[0]['d_time'], data[0]['d_cost'], data[0]['d_fuel_cost']
+                                    ]];
+                                    var d_data2 = [[
+                                        data[1]['d_distance'], data[1]['d_time'], data[1]['d_cost'], data[1]['d_fuel_cost']
+                                    ]];
+                                    var d_data3 = [[
+                                        data[2]['d_distance'], data[2]['d_time'], data[2]['d_cost'], data[2]['d_fuel_cost']
+                                    ]];
+
+                                    var max_cost = Math.max(data[0]['d_cost'], data[1]['d_cost'], data[2]['d_cost']) + 1;
+
+                                    var schema = [
+                                        {name: 'Distance', index: 0, text: 'Distance(M)'},
+                                        {name: 'Time', index: 1, text: 'Time(S)'},
+                                        {name: 'Total Cost', index: 2, text: 'Total cost(¥)'},
+                                        {name: 'Fuel Cost', index: 3, text: 'Fuel cost(¥)'},
+                                    ];
+
+                                    var lineStyle = {
+                                        normal: {
+                                            width: 1,
+                                            opacity: 0.5
+                                        }
+                                    };
+
+                                    var option = {
+                                        title: {
+                                            text: 'Comparison of different drive strategy',
+                                            textStyle: {
+                                                fontFamily: 'Arial',
+                                                fontSize: 18,
+                                                fontStyle: 'normal',
+                                                fontWeight: 'bold',
+                                            }
+                                        },
+                                        backgroundColor: '#fff',
+                                        legend: {
+                                            bottom: 30,
+                                            itemGap: 35,
+                                            data: ["Short distance", "Prefer highway", "Less toll"],
+                                            textStyle: {
+                                                color: '#000000',
+                                                fontSize: 12
+                                            }
+                                        },
+                                        tooltip: {},
+
+                                        parallelAxis: [
+                                            {dim: 0, name: schema[0].text},
+                                            {dim: 1, name: schema[1].text},
+                                            {dim: 2, name: schema[2].text},
+                                            {dim: 3, name: schema[3].text}
+                                        ],
+                                        visualMap: {
+                                            show: true,
+                                            min: 0,
+                                            max: max_cost,
+                                            dimension: 2,
+                                            x: '5px',
+                                            y: '100px',
+                                            inRange: {
+                                                color: ['#d94e5d', '#eac736', '#50a3ba'].reverse(),
+                                            }
+                                        },
+                                        parallel: {
+                                            left: '10%',
+                                            right: '15%',
+                                            bottom: 100,
+                                            parallelAxisDefault: {
+                                                nameTextStyle: {
+                                                    color: '#000000',
+                                                    fontSize: 12
+                                                },
+                                                axisLine: {
+                                                    lineStyle: {
+                                                        color: '#00008B'
+                                                    }
+                                                },
+                                                axisLabel: {
+                                                    color: '#000000'
+                                                }
+                                            }
+                                        },
+                                        series: [
+                                            {
+                                                name: 'Short distance',
+                                                type: 'parallel',
+                                                lineStyle: lineStyle,
+                                                data: d_data1
+                                            },
+                                            {
+                                                name: 'Prefer highway',
+                                                type: 'parallel',
+                                                lineStyle: lineStyle,
+                                                data: d_data2
+                                            },
+                                            {
+                                                name: 'Less toll',
+                                                type: 'parallel',
+                                                lineStyle: lineStyle,
+                                                data: d_data3
+                                            }
+                                        ]
+                                    };
+                                    driveChart.setOption(option);
+                                }
+                                else if (data == '[]') {
+                                    alert("The two pointer is too close!");
+                                }
+                            }
+                        });
+
+                        $.ajax({
+                            url: "/ride_path",
+                            type: "post",
+                            data: JSON.stringify(poi_data),
+                            dataType: 'json',
+                            contentType: 'application/json; charset=utf-8',
+                            success: function (data) {
+                                if (data.length == 0) {
+                                    alert("The two points are too close / The two points are same. Please choose again!");
+                                }
+
+                                if (data) {
+                                    var average_ride_list = [data[0]['r_distance'], data[0]['r_time']];
+                                    var max_time = Math.max(data[2], data[5], average_ride_list[1]);
+                                    var max_cost = Math.max(data[3], data[6]);
+                                    var max_dis = Math.max(data[1], data[4], average_ride_list[0]);
+                                    var comChart = echarts.init(document.getElementById('comparison'));
+                                    var colors = ['#5793f3', '#d14a61', '#675bba'];
+                                    var option = {
+                                        title: {
+                                            text: 'Comparison of bus, driving and riding',
+                                            textStyle: {
+                                                fontFamily: 'Arial',
+                                                fontSize: 18,
+                                                fontStyle: 'normal',
+                                                fontWeight: 'bold',
+                                            }
+                                        },
+                                        color: colors,
+                                        tooltip: {
+                                            trigger: 'axis',
+                                            axisPointer: {
+                                                type: 'cross'
+                                            }
+                                        },
+                                        grid: {
+                                            right: '30%'
+                                        },
+                                        toolbox: {
+                                            feature: {
+                                                dataView: {show: true, readOnly: false},
+                                                restore: {show: true},
+                                                saveAsImage: {show: true}
+                                            }
+                                        },
+                                        legend: {
+                                            x: '95px',
+                                            y: '23px',
+                                            data: ['Time', 'Distance', 'Cost',]
+                                        },
+                                        xAxis: [
+                                            {
+                                                type: 'category',
+                                                axisTick: {
+                                                    alignWithLabel: true
+                                                },
+                                                data: ['Driving', 'Bus', 'Riding']
+                                            }
+                                        ],
+                                        yAxis: [
+                                            {
+                                                type: 'value',
+                                                name: 'Time',
+                                                min: 0,
+                                                max: max_time + 1000,
+                                                position: 'right',
+                                                axisLine: {
+                                                    lineStyle: {
+                                                        color: colors[0]
+                                                    }
+                                                },
+                                                axisLabel: {
+                                                    formatter: '{value} S'
+                                                }
+                                            },
+                                            {
+                                                type: 'value',
+                                                name: 'Distance',
+                                                min: 0,
+                                                max: max_dis + 1000,
+                                                position: 'right',
+                                                offset: 60,
+                                                axisLine: {
+                                                    lineStyle: {
+                                                        color: colors[1]
+                                                    }
+                                                },
+                                                axisLabel: {
+                                                    formatter: '{value} M'
+                                                }
+                                            },
+                                            {
+                                                type: 'value',
+                                                name: 'Cost',
+                                                min: 0,
+                                                max: Math.round(max_cost + 2),
+                                                position: 'left',
+                                                axisLine: {
+                                                    lineStyle: {
+                                                        color: colors[2]
+                                                    }
+                                                },
+                                                axisLabel: {
+                                                    formatter: '¥ {value}'
+                                                }
+                                            }
+                                        ],
+                                        series: [
+                                            {
+                                                name: 'Time',
+                                                type: 'bar',
+                                                data: [data[5], data[2], average_ride_list[1]]
+                                            },
+                                            {
+                                                name: 'Distance',
+                                                type: 'bar',
+                                                yAxisIndex: 1,
+                                                data: [data[4], data[1], average_ride_list[0]]
+                                            },
+                                            {
+                                                name: 'Cost',
+                                                type: 'line',
+                                                yAxisIndex: 2,
+                                                data: [data[6], data[3], 0]
+                                            }
+                                        ]
+                                    };
+                                    comChart.setOption(option);
+                                }
+                            }
+                        });
+
+                        {#var cd_url = {'url': 'https://www.booking.com/searchresults.zh-cn.html?city=-1900349'};#}
+                        {#$.ajax({#}
+                        {#    url: "/get_h_info",#}
+                        {#    type: "post",#}
+                        {#    data: JSON.stringify(cd_url),#}
+                        {#    dataType: 'json',#}
+                        {#    contentType: 'application/json; charset=utf-8'#}
+                        {# });#}
+
+                        $.ajax({
+                            url: "/get_hotel",
+                            type: "post",
+                            data: JSON.stringify(poi_data),
+                            dataType: 'json',
+                            contentType: 'application/json; charset=utf-8',
+                            success: function (data) {
+                                if (data) {
+                                    start_poi = data['start_hotel_info'];
+                                    des_poi = data['des_hotel_info'];
+                                    $(".hotel_list").html("<tr><th>&nbsp;</th><th> Starting POI </th><th>Destination POI</th></tr>");
+                                    $(".hotel_list").append("<tr><td style=font-weight:bold>Name</td><td>" + start_poi[1] + "</td><td>" + des_poi[1] + "</td></tr>");
+                                    $(".hotel_list").append("<tr><td style=font-weight:bold>Rate</td><td>" + start_poi[0] + "</td><td>" + des_poi[0] + "</td></tr>");
+                                    $(".hotel_list").append("<tr><td style=font-weight:bold>Price</td><td>" + start_poi[3] + "</td><td>" + des_poi[3] + "</td></tr>");
+                                }
+                            }
+                        });
+
+
+                        var mySwiper = new Swiper('.swiper-container', {
+                            direction: 'horizontal',
+                            observer: true,
+                            observeParents: true,
+                            pagination: {
+                                el: '.swiper-pagination',
+                                clickable: true,
+                                uniqueNavElements: false
+                            }
+
+                        })
+                    }
+                }
+            });
+        }
+    </script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="initial-scale=1.0, user-scalable=no" />
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    <title>Baidu Map </title>
+    <style type="text/css">
+        html{height:63%}
+        body{height:100%;margin:0px;padding:0px}
+    </style>
+
+</head>
+<body>
+
+    <form class="poi_form" method="POST" action="">
+        {{ sort_form.hidden_tag()}}
+
+        <label>Start POI Sort：</label>
+
+        {{ sort_form.start_sort(class = "start_sort",style="width: 300px") }}
+
+        <label>Destination POI Sort：</label>
+        {{ sort_form.destination_sort(class = "des_sort",style="width: 300px") }}
+
+        <label>Start POI Name：</label>
+        {{ sort_form.start_name(class = "start_name",style="width: 300px") }}
+
+        <label>Destination POI Name：</label>
+        {{ sort_form.destination_name(class = "des_name",style="width: 300px") }}
+
+        <button type="button" onclick="ajaxForm()">Click to submit</button>
+    </form>
+
+    <div id="container"></div>
+
+    <div class="swiper-container">
+        <div class="swiper-wrapper">
+            <div class="swiper-slide">
+                <div id="bus" style="width: 100%; height: 100%"></div>
+            </div>
+            <div class="swiper-slide">
+                <div id="drive" style="width: 100%; height: 100%"></div>
+            </div>
+            <div class="swiper-slide">
+                <div id="comparison" style="width: 100%; height: 100%"></div>
+            </div>
+        </div>
+        <div class="swiper-pagination"></div>
+    </div>
+
+    <table class="hotel_list" border="1" style="display:none"></table>
+
+</body>
+</html>

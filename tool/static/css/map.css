@@ -1,0 +1,88 @@
+form.poi_form
+{
+    width: 300px;
+    position: absolute;
+    left: 10px;
+    top: 10px;
+}
+
+button
+{
+    background-color: #6495ED;
+    padding: 5px 12px;
+    border-radius: 8px;
+    position: relative;
+    left: 75px;
+    top: 12px;
+}
+
+button:active
+{
+  background-color: #0000FF;
+  box-shadow: 0 5px #666;
+  transform: translateY(4px);
+}
+
+.hotel_list
+{
+    text-align: center;
+    width: 275px;
+    max-height: 275px;
+    position: absolute;
+    left: 335px;
+    top: 15px;
+}
+
+#container
+{
+    height: 95%;
+    width: 50%;
+    position: absolute;
+    left: 630px;
+    top: 10px;
+}
+
+.swiper-container
+{
+    position: absolute;
+    left: -340px;
+    top: 310px;
+    width: 570px;
+    height:300px;
+}
+
+
+.BMap_bubble_title{
+    color:white;
+	font-size:15px;
+	font-weight:bold;
+	text-align:left;
+	padding-left:3px;
+	padding-top:3px;
+	border-bottom:1px solid gray;
+	background-color:#0066b3;
+}
+
+.BMap_pop div:nth-child(1){
+    border-radius:7px 0 0 0;
+}
+.BMap_pop div:nth-child(3){
+    border-radius:0 7px 0 0;
+    background:#ABABAB;;
+    /*background: #ABABAB;*/
+    width:23px;
+    width:0px;
+    height:0px;
+}
+.BMap_pop div:nth-child(3) div{
+    border-radius:7px;
+}
+.BMap_pop div:nth-child(5){
+    border-radius:0 0 0 7px;
+}
+.BMap_pop div:nth-child(5) div{
+    border-radius:7px;
+}
+.BMap_pop div:nth-child(7){
+    border-radius:0 0 7px 0 ;
+}
